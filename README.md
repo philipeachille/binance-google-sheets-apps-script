@@ -21,8 +21,11 @@ The API Key and Secret are examples. You need to replace them with your own.
 You need the following sheets to be setup in Google Sheets
 
 Portfolio
+
 Binance Log
+
 Execution Log
+
 Purchase List (Testing only - Data taken from Portfolio instead in live environment)
 
 # Resources Used
