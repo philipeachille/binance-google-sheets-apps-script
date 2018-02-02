@@ -10,6 +10,10 @@ These scripts are under development.
 
 This repository stores scripts that can be run in in Google Sheets that interact with the API of the Binance cryptocurrency exchange. The scripts contained here allow the analysis of Binance market data and the automation of BUY and STOP LOSS orders.
 
+# API Key and Secret
+
+THe API Key and Secret are examples. You need to replace them with your own.
+
 # Resources Used
 
 https://gist.github.com/tanaikech/175067567819577fd8eba9b82eabd1a6
