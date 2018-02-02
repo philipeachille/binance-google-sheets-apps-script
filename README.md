@@ -4,7 +4,9 @@ Use the scripts contained here ENTIRELY AT YOUR OWN RISK. Some scripts actually 
 
 BUGS are likely to appear.
 
-These scripts are under development.
+This is DIRTY CODE.
+
+These scripts and the interaction between the requests, results and sheets are UNDER DEVELOPMENT.
 
 # Binance Google Sheets Apps Script
 
@@ -12,7 +14,16 @@ This repository stores scripts that can be run in in Google Sheets that interact
 
 # API Key and Secret
 
-THe API Key and Secret are examples. You need to replace them with your own.
+The API Key and Secret are examples. You need to replace them with your own.
+
+# Setting up Sheets
+
+You need the following sheets to be setup in Google Sheets
+
+Portfolio
+Binance Log
+Execution Log
+Purchase List (Testing only - Data taken from Portfolio instead in live environment)
 
 # Resources Used
 
