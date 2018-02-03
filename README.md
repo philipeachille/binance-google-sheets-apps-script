@@ -1,2 +1,3 @@
-# binance-google-sheets-apps-script
-Files 
+# Binance Google Sheets Apps Script
+
+All files currently in development branch
