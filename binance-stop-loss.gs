@@ -1,30 +1,45 @@
 // This file deals with STOP LOSS orders, to be placed after BUY orders are filled.
-// 
 
 
 function executeStopLoss() {
+ 
+    var active = SpreadsheetApp.getActiveSpreadsheet(),
+        logs_sheet = active.getSheetByName("Execution Log");  
+  
+    logs_sheet.appendRow([new Date(),"STOP LOSS SCRIPT","started"]);
+
+  
     var purchaseList = preparePurchaseList();
   
     for (i = 0; i < purchaseList.length; i++) {
      
-      var purchase = stopLossBinance(purchaseList[i][0],purchaseList[i][1]);
+      var purchase = stopLossBinance(purchaseList[i][0],purchaseList[i][1],purchaseList[i][2]);
       
-        Logger.log(purchase);
     }
+  
+    logs_sheet.appendRow([new Date(),"STOP LOSS SCRIPT","finished"]);
+
 }
 
 
 
-function stopLossBinance(pair,quantity) {
+function stopLossBinance(pair,quantity,stopPercent) {
+  
+  var scriptDate = new Date(),
+      active = SpreadsheetApp.getActiveSpreadsheet(),
+      logs_sheet = active.getSheetByName("Execution Log");  
     
-  var stop_price = bookTickerBinance(pair);
+  var tickerData = bookTickerBinance(pair);  // outputs [200, [[Sat Feb 03 00:12:58 GMT+01:00 2018, FUNBTC, 0.00000645, 0.00000651, 35520.00000000, 6368.00000000]]]
   
-  return stop_price;
  
-  
-  /** 
-    var key = '3BNVHfXujYPU0BwU6XpJQMOJO8G2opXnTIdXHjlDffcGiCqzNEgggW7xnWPzYI0z', 
-        secret = 'P0YVbG7qhyEJBGoMdYspaWUvVova5hLBGaw9IcDYCJzYfiqCAwVpeA7qCCiQLFEY',
+  if (tickerData[0] == 200) {
+    var stopPrice = tickerData[1][0][3] * (1+stopPercent);
+    
+            Logger.log([tickerData[1][0][3],stopPrice]);
+
+
+    var key = returnKeySecret()[0], 
+        secret = returnKeySecret()[1],
     
         baseUrl = "https://api.binance.com",
         api = "/api/v3/order", 
@@ -33,7 +48,7 @@ function stopLossBinance(pair,quantity) {
           'symbol' : pair,
           'side' : 'SELL',
           'type' : 'STOP_LOSS',
-          'stopPrice' : stop_price,
+          'stopPrice' : stopPrice,
           'quantity' : quantity,
           'timestamp': Number(new Date().getTime()).toFixed(0)
         },
@@ -43,9 +58,6 @@ function stopLossBinance(pair,quantity) {
           'headers': {'X-MBX-APIKEY': key},
           'muteHttpExceptions': true
         };
-
-    var active = SpreadsheetApp.getActiveSpreadsheet(),
-        logs_sheet = active.getSheetByName("Execution Log");  
 
     var string = Object.keys(apiStrings).reduce(function(a,k){a.push(k+'='+encodeURIComponent(apiStrings[k]));return a},[]).join('&'),
         signature = Utilities.computeHmacSha256Signature(string, secret);
@@ -57,7 +69,8 @@ function stopLossBinance(pair,quantity) {
   
     var query = "?" + string + "&signature=" + signature;
   
-   
+    
+  
  try {
   
   var counter = 1;
@@ -67,12 +80,10 @@ function stopLossBinance(pair,quantity) {
       var response = UrlFetchApp.fetch(baseUrl + api + query, params);
       var response_code = response.getResponseCode();
       var data = JSON.parse(response.getContentText());
-    
-    var scriptDate = new Date();
-    
+        
     if (response_code !== 200) {
       counter += 1;
-      logs_sheet.appendRow([new Date(),"PLACE STOP ORDER REQUEST FAILED","try again",response_code, data]);
+      logs_sheet.appendRow([scriptDate,"PLACE STOP ORDER REQUEST"," FAILED","try again",response_code, data]);
 
       Utilities.sleep(20000);
     } else {
@@ -101,19 +112,24 @@ function stopLossBinance(pair,quantity) {
 
           
   if (counter === 100) {
-    logs_sheet.appendRow([scriptDate,"PLACE STOP ORDER REQUEST SUCCESSFUL",data.side,data.status,data.symbol,data.executedQty,data.price,data.orderId]);
+    logs_sheet.appendRow([scriptDate, "PLACE STOP ORDER REQUEST", "SUCCESSFUL", data.side, data.status, data.symbol, data.executedQty, data.price, data.orderId]);
     return [response_code, write];
   } else {
-    logs_sheet.appendRow([scriptDate,"PLACE STOP ORDER REQUEST FAILED","stopped trying",response_code, data]);
+    logs_sheet.appendRow([scriptDate, "PLACE STOP ORDER REQUEST", "FAILED", "stopped trying", response_code, data]);
   }  
     
   } catch (e) {
-   logs_sheet.appendRow([new Date(),"PLACE STOP ORDER EXECUTION ERROR","when dealing with response. Order may have executed still. Compare time stamps."]);
-  }  **/
+   logs_sheet.appendRow([scriptDate, "PLACE STOP ORDER EXECUTION", "ERROR", "when dealing with response. Order may have executed still. Compare time stamps."]);
+  }  
+    
+  } else {
+    logs_sheet.appendRow([scriptDate, "PLACE STOP ORDER EXECUTION", "FAILED", "due to GET TICKER failure"]);
+  } 
 }
   
   
 function bookTickerBinance(pair) {
+    var scriptDate = new Date();
     
     var baseUrl = "https://api.binance.com",
         api = "/api/v3/ticker/bookTicker", 
@@ -143,14 +159,12 @@ function bookTickerBinance(pair) {
       var response = UrlFetchApp.fetch(baseUrl + api + query, params);
       var response_code = response.getResponseCode();
       var data = JSON.parse(response.getContentText());
-    
-    var scriptDate = new Date();
-    
+        
     if (response_code !== 200) {
       counter += 1;
-      logs_sheet.appendRow([new Date(),"GET TICKER REQUEST FAILED","try again",response_code, data]);
+      logs_sheet.appendRow([scriptDate,"GET TICKER REQUEST", "FAILED","try again",response_code, data]);
 
-      Utilities.sleep(20000);
+      Utilities.sleep(7000);
     } else {
       counter += 99;
 
@@ -169,14 +183,15 @@ function bookTickerBinance(pair) {
 
       
   if (counter === 100) {
-    logs_sheet.appendRow([scriptDate,"GET TICKER REQUEST SUCCESSFUL",data.symbol,data.bidPrice,data.askPrice,data.bidQty,data.askQty]);
+    logs_sheet.appendRow([scriptDate,"GET TICKER REQUEST", "SUCCESSFUL",data.symbol,data.bidPrice,data.askPrice,data.bidQty,data.askQty]);
     return [response_code, write];
   } else {
-    logs_sheet.appendRow([scriptDate,"GET TICKER REQUEST FAILED","stopped trying",response_code, data]);
+    logs_sheet.appendRow([scriptDate,"GET TICKER REQUEST", "FAILED","stopped trying",response_code, data]);
+    return [0,[scriptDate,"GET TICKER REQUEST"," FAILED","stopped trying",response_code, data]];
   }
     
   } catch (e) {
-   logs_sheet.appendRow([new Date(),"GET TICKER EXECUTION ERROR","when dealing with response. Order may have executed still. Compare time stamps."]);
+   logs_sheet.appendRow([scriptDate,"GET TICKER EXECUTION", "ERROR","when dealing with response"]);
+    return [0,[scriptDate,"GET TICKER EXECUTION", "ERROR","when dealing with response"]];
   }
 }
-  
